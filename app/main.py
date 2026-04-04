@@ -1,0 +1,55 @@
+import structlog
+from fastapi import FastAPI
+
+from app.config import settings
+from app.core.exceptions import AppError, app_error_handler
+from app.core.logging import setup_logging
+
+# Configure logging before anything else in the application
+setup_logging(log_level=settings.log_level, json_logs=settings.is_production)
+
+logger = structlog.get_logger(__name__)
+
+
+def create_app() -> FastAPI:
+    from contextlib import asynccontextmanager
+
+    from app.api.health import router as health_router
+    from app.cache.client import close_pool, get_redis_client
+    from app.dependencies import engine
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        logger.info("starting up", environment=settings.environment)
+
+        redis = get_redis_client()
+        try:
+            await redis.ping()
+            logger.info("redis connected")
+        except Exception:
+            logger.error("redis unavailable on startup — continuing anyway")
+        finally:
+            await redis.aclose()
+
+        yield
+
+        logger.info("shutting down")
+        await close_pool()
+        await engine.dispose()
+
+    app = FastAPI(
+        title="Portfolio Tracker API",
+        version="0.1.0",
+        lifespan=lifespan,
+        docs_url=None if settings.is_production else "/docs",
+        redoc_url=None if settings.is_production else "/redoc",
+    )
+
+    app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
+
+    app.include_router(health_router)
+
+    return app
+
+
+app = create_app()
