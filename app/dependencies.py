@@ -1,12 +1,15 @@
 import uuid
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
 from app.core.exceptions import UnauthorizedError
 from app.core.security import decode_access_token
+
+_bearer = HTTPBearer()
 
 engine = create_async_engine(
     settings.database_url,
@@ -37,16 +40,14 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
-async def get_current_user_id(authorization: str = Header(...)) -> uuid.UUID:
+async def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> uuid.UUID:
     """
     Extracts and validates the JWT from the Authorization header.
     Returns the user's UUID. Raises 401 if the token is missing or invalid.
     """
-    if not authorization.startswith("Bearer "):
-        raise UnauthorizedError("Invalid authorization header")
-
-    token = authorization.removeprefix("Bearer ")
-    user_id = decode_access_token(token)
+    user_id = decode_access_token(credentials.credentials)
 
     if not user_id:
         raise UnauthorizedError("Invalid or expired token")

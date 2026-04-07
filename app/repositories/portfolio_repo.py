@@ -30,6 +30,7 @@ async def create(session: AsyncSession, user_id: uuid.UUID, name: str, descripti
     portfolio = Portfolio(user_id=user_id, name=name, description=description)
     session.add(portfolio)
     await session.flush()
+    await session.refresh(portfolio, ["positions"])
     return portfolio
 
 

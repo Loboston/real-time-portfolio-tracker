@@ -1,5 +1,6 @@
 import structlog
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 
 from app.config import settings
 from app.core.exceptions import AppError, app_error_handler
@@ -44,7 +45,23 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
         docs_url=None if settings.is_production else "/docs",
         redoc_url=None if settings.is_production else "/redoc",
+        swagger_ui_init_oauth={},
     )
+
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        schema["components"]["securitySchemes"] = {
+            "BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+        }
+        for path in schema.get("paths", {}).values():
+            for operation in path.values():
+                operation["security"] = [{"BearerAuth": []}]
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
 
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
 
