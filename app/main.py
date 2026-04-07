@@ -15,6 +15,7 @@ def create_app() -> FastAPI:
     from contextlib import asynccontextmanager
 
     from app.api.health import router as health_router
+    from app.api.v1.router import router as v1_router
     from app.cache.client import close_pool, get_redis_client
     from app.dependencies import engine
 
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
 
     app.include_router(health_router)
+    app.include_router(v1_router)
 
     return app
 
