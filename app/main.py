@@ -1,3 +1,5 @@
+import asyncio
+
 import structlog
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
@@ -19,6 +21,8 @@ def create_app() -> FastAPI:
     from app.api.v1.router import router as v1_router
     from app.cache.client import close_pool, get_redis_client
     from app.dependencies import engine
+    from app.market_data.ingestor import run_ingestor
+    from app.market_data.mock_provider import MockMarketDataProvider
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -33,7 +37,12 @@ def create_app() -> FastAPI:
         finally:
             await redis.aclose()
 
+        provider = MockMarketDataProvider()
+        ingestor_task = asyncio.create_task(run_ingestor(provider))
+
         yield
+
+        ingestor_task.cancel()
 
         logger.info("shutting down")
         await close_pool()
