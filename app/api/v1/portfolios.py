@@ -27,7 +27,7 @@ async def create_portfolio(
     return await service.create_portfolio(session, user_id, data)
 
 
-@router.get("/{portfolio_id}", response_model=PortfolioResponse)
+@router.get("/{portfolio_id}")
 async def get_portfolio(
     portfolio_id: uuid.UUID,
     user_id: uuid.UUID = Depends(get_current_user_id),

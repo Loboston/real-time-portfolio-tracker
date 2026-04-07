@@ -2,7 +2,9 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cache.price_cache import get_prices
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.domain.portfolio.calculator import compute_portfolio_metrics
 from app.domain.portfolio.schemas import PortfolioCreate, PortfolioResponse
 from app.repositories import portfolio_repo
 
@@ -20,7 +22,7 @@ async def create_portfolio(
 
 async def get_portfolio(
     session: AsyncSession, user_id: uuid.UUID, portfolio_id: uuid.UUID
-) -> PortfolioResponse:
+) -> dict:
     portfolio = await portfolio_repo.get_by_id(session, portfolio_id)
 
     if not portfolio:
@@ -28,7 +30,9 @@ async def get_portfolio(
     if portfolio.user_id != user_id:
         raise ForbiddenError()
 
-    return PortfolioResponse.model_validate(portfolio)
+    symbols = {p.symbol for p in portfolio.positions}
+    prices = await get_prices(symbols)
+    return compute_portfolio_metrics(portfolio, prices)
 
 
 async def list_portfolios(session: AsyncSession, user_id: uuid.UUID) -> list[PortfolioResponse]:
