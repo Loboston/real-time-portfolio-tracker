@@ -23,6 +23,8 @@ def create_app() -> FastAPI:
     from app.dependencies import engine
     from app.market_data.ingestor import run_ingestor
     from app.market_data.mock_provider import MockMarketDataProvider
+    from app.websocket.router import router as ws_router
+    from app.websocket.subscriber import run_subscriber
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -39,10 +41,12 @@ def create_app() -> FastAPI:
 
         provider = MockMarketDataProvider()
         ingestor_task = asyncio.create_task(run_ingestor(provider))
+        subscriber_task = asyncio.create_task(run_subscriber())
 
         yield
 
         ingestor_task.cancel()
+        subscriber_task.cancel()
 
         logger.info("shutting down")
         await close_pool()
@@ -76,6 +80,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(v1_router)
+    app.include_router(ws_router)
 
     return app
 
