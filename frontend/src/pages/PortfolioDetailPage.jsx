@@ -165,7 +165,7 @@ export default function PortfolioDetailPage() {
                 <td className="px-5 py-3 text-right">${fmt(pos.average_cost)}</td>
                 <td className="px-5 py-3 text-right">${fmt(pos.current_price)}</td>
                 <td className="px-5 py-3 text-right">${fmt(pos.market_value)}</td>
-                <td className="px-5 py-3 text-right"><PnlCell value={pos.pnl} /></td>
+                <td className="px-5 py-3 text-right"><PnlCell value={pos.unrealized_pnl} /></td>
                 <td className="px-5 py-3 text-right"><PnlCell value={pos.pnl_pct} /></td>
                 <td className="px-5 py-3 text-right">
                   <button
