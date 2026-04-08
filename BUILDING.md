@@ -35,7 +35,7 @@ Goal: stack runs, app starts, health endpoint returns 200.
 
 ---
 
-## Phase 2 — Auth ⬜
+## Phase 2 — Auth ✅
 
 Goal: users can register and log in. All future endpoints are protected by JWT.
 
@@ -57,7 +57,7 @@ Goal: users can register and log in. All future endpoints are protected by JWT.
 
 ---
 
-## Phase 3 — Portfolio + Position CRUD ⬜
+## Phase 3 — Portfolio + Position CRUD ✅
 
 Goal: authenticated users can create portfolios and add positions to them.
 
@@ -80,7 +80,7 @@ Goal: authenticated users can create portfolios and add positions to them.
 
 ---
 
-## Phase 4 — Market Data + Price Ingestor ⬜
+## Phase 4 — Market Data + Price Ingestor ✅
 
 Goal: a background task fetches mock prices and writes them to Redis every N seconds.
 
@@ -99,7 +99,7 @@ Goal: a background task fetches mock prices and writes them to Redis every N sec
 
 ---
 
-## Phase 5 — WebSocket Layer ⬜
+## Phase 5 — WebSocket Layer ✅
 
 Goal: clients connect over WebSocket, authenticate, and stay subscribed to a portfolio.
 
@@ -117,7 +117,7 @@ Goal: clients connect over WebSocket, authenticate, and stay subscribed to a por
 
 ---
 
-## Phase 6 — Calculator + Live Broadcast ⬜
+## Phase 6 — Calculator + Live Broadcast ✅
 
 Goal: when a price changes, affected clients receive a recalculated portfolio update in real time.
 
@@ -171,18 +171,18 @@ Goal: key paths are covered by automated tests.
 
 ---
 
-## Phase 9 — Frontend ⬜
+## Phase 9 — Frontend ✅
 
 Goal: a React dashboard shows live portfolio data updating in real time.
 
 | Step | What we build | Files |
 |------|--------------|-------|
-| ⬜ 9.1 | Vite + React + Tailwind setup, added to docker-compose | `frontend/` scaffold |
-| ⬜ 9.2 | REST API client wrapper | `frontend/src/api/` |
-| ⬜ 9.3 | WebSocket client with reconnect logic | `frontend/src/ws/` |
-| ⬜ 9.4 | Login + Register pages | `frontend/src/pages/` |
-| ⬜ 9.5 | Portfolio list page | `frontend/src/pages/Portfolios.jsx` |
-| ⬜ 9.6 | Portfolio detail page — live P&L table, connection status indicator | `frontend/src/pages/PortfolioDetail.jsx` |
+| ✅ 9.1 | Vite + React + Tailwind setup, added to docker-compose | `frontend/` scaffold |
+| ✅ 9.2 | REST API client wrapper | `frontend/src/api/` |
+| ✅ 9.3 | WebSocket client with reconnect logic | `frontend/src/ws/` |
+| ✅ 9.4 | Login + Register pages | `frontend/src/pages/` |
+| ✅ 9.5 | Portfolio list page | `frontend/src/pages/PortfoliosPage.jsx` |
+| ✅ 9.6 | Portfolio detail page — live P&L table, connection status indicator | `frontend/src/pages/PortfolioDetailPage.jsx` |
 
 **Phase 9 checkpoint:**
 - Open browser, log in, create a portfolio, add positions
@@ -190,9 +190,39 @@ Goal: a React dashboard shows live portfolio data updating in real time.
 
 ---
 
+## Phase 10 — AWS Deployment ⬜
+
+Goal: the full stack runs on AWS — accessible from any browser, no local Docker required.
+
+| Step | What we build | Files |
+|------|--------------|-------|
+| ⬜ 10.1 | Dockerize frontend for production build (nginx to serve static files) | `frontend/Dockerfile`, `frontend/nginx.conf` |
+| ⬜ 10.2 | Production Dockerfiles for backend (no --reload, gunicorn/uvicorn workers) | `Dockerfile` (updated) |
+| ⬜ 10.3 | ECR repositories — push backend + frontend images | AWS Console / CLI |
+| ⬜ 10.4 | RDS Postgres + ElastiCache Redis — managed data layer | AWS Console / Terraform |
+| ⬜ 10.5 | ECS Fargate — task definitions for backend + frontend containers | `infra/task-definitions/` |
+| ⬜ 10.6 | ALB — routes `/api` and `/ws` to backend, everything else to frontend | AWS Console / Terraform |
+| ⬜ 10.7 | Secrets Manager — DATABASE_URL, REDIS_URL, SECRET_KEY stored securely | AWS Console |
+| ⬜ 10.8 | GitHub Actions CI/CD — build, push to ECR, deploy to ECS on push to main | `.github/workflows/deploy.yml` |
+
+**Phase 10 checkpoint:**
+- Push to `main` triggers a deploy
+- App is live at a public URL
+- WebSocket live updates work in production
+
+---
+
 ## What's been built so far
 
 ```
-✅ Phase 1 complete — stack runs, health endpoint green
-⬜ Phase 2 — next up
+✅ Phase 1 — Infrastructure
+✅ Phase 2 — Auth
+✅ Phase 3 — Portfolio + Position CRUD
+✅ Phase 4 — Market Data + Price Ingestor
+✅ Phase 5 — WebSocket Layer
+✅ Phase 6 — Calculator + Live Broadcast
+⏭️  Phase 7 — Polish (skipped for now)
+⏭️  Phase 8 — Tests (skipped for now)
+✅ Phase 9 — Frontend
+⬜ Phase 10 — AWS Deployment (next up)
 ```
