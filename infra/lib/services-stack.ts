@@ -4,6 +4,8 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { InfraStack } from './infra-stack';
 
 export class ServicesStack extends cdk.Stack {
@@ -109,7 +111,38 @@ export class ServicesStack extends cdk.Stack {
       healthCheck: { path: '/', interval: cdk.Duration.seconds(30) },
     });
 
+    // ── CloudFront Distribution ───────────────────────────────────────────
+    const albOrigin = new origins.LoadBalancerV2Origin(alb, {
+      protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+      httpPort: 80,
+    });
+
+    const noCachePolicy = new cloudfront.CachePolicy(this, 'NoCachePolicy', {
+      defaultTtl: cdk.Duration.seconds(0),
+      minTtl: cdk.Duration.seconds(0),
+      maxTtl: cdk.Duration.seconds(0),
+    });
+
+    const distribution = new cloudfront.Distribution(this, 'Distribution', {
+      defaultBehavior: {
+        origin: albOrigin,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+        cachePolicy: noCachePolicy,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      },
+      additionalBehaviors: {
+        '/ws/*': {
+          origin: albOrigin,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: noCachePolicy,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        },
+      },
+    });
+
     // ── Outputs ───────────────────────────────────────────────────────────
-    new cdk.CfnOutput(this, 'AppUrl', { value: `http://${alb.loadBalancerDnsName}` });
+    new cdk.CfnOutput(this, 'AppUrl', { value: `https://${distribution.distributionDomainName}` });
   }
 }
