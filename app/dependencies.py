@@ -12,7 +12,7 @@ from app.core.security import decode_access_token
 _bearer = HTTPBearer()
 
 engine = create_async_engine(
-    settings.database_url,
+    settings.get_database_url(),
     echo=settings.environment == "development",
     pool_pre_ping=True,
     pool_size=10,

@@ -1,0 +1,121 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_BACKEND: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/portfolio-tracker-backend
+  ECR_FRONTEND: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/portfolio-tracker-frontend
+  ECS_CLUSTER: ServicesStack-ClusterEB0386A7-49aRtYvGA434
+  BACKEND_SERVICE: ServicesStack-BackendService7A4224EE-eG4kb3VZXOiV
+  FRONTEND_SERVICE: ServicesStack-FrontendServiceBC94BA93-Vxb31kE7qOiZ
+
+jobs:
+  deploy:
+    name: Build, Migrate, Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend
+        run: |
+          docker build --platform linux/amd64 \
+            -t $ECR_BACKEND:${{ github.sha }} \
+            -t $ECR_BACKEND:latest \
+            .
+          docker push $ECR_BACKEND:${{ github.sha }}
+          docker push $ECR_BACKEND:latest
+
+      - name: Build and push frontend
+        run: |
+          docker build --platform linux/amd64 \
+            -t $ECR_FRONTEND:${{ github.sha }} \
+            -t $ECR_FRONTEND:latest \
+            ./frontend
+          docker push $ECR_FRONTEND:${{ github.sha }}
+          docker push $ECR_FRONTEND:latest
+
+      - name: Run database migrations
+        run: |
+          # Look up network config from the deployed stack
+          SUBNETS=$(aws cloudformation describe-stacks \
+            --stack-name InfraStack \
+            --query "Stacks[0].Outputs[?contains(OutputKey,'PrivateSubnet1')].OutputValue" \
+            --output text),$(aws cloudformation describe-stacks \
+            --stack-name InfraStack \
+            --query "Stacks[0].Outputs[?contains(OutputKey,'PrivateSubnet2')].OutputValue" \
+            --output text)
+
+          APP_SG=$(aws cloudformation describe-stacks \
+            --stack-name InfraStack \
+            --query "Stacks[0].Outputs[?contains(OutputKey,'AppSg')].OutputValue" \
+            --output text)
+
+          TASK_DEF=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $BACKEND_SERVICE \
+            --query "services[0].taskDefinition" \
+            --output text)
+
+          echo "Running migrations with task def: $TASK_DEF"
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster $ECS_CLUSTER \
+            --task-definition $TASK_DEF \
+            --overrides '{"containerOverrides":[{"name":"backend","command":["alembic","upgrade","head"]}]}' \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$APP_SG],assignPublicIp=DISABLED}" \
+            --launch-type FARGATE \
+            --query "tasks[0].taskArn" \
+            --output text)
+
+          echo "Migration task ARN: $TASK_ARN"
+          aws ecs wait tasks-stopped --cluster $ECS_CLUSTER --tasks $TASK_ARN
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query "tasks[0].containers[0].exitCode" \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+
+          echo "Migrations completed successfully"
+
+      - name: Deploy backend
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $BACKEND_SERVICE \
+            --force-new-deployment \
+            --output text
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $BACKEND_SERVICE
+
+      - name: Deploy frontend
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $FRONTEND_SERVICE \
+            --force-new-deployment \
+            --output text
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $FRONTEND_SERVICE

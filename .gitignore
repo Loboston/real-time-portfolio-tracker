@@ -25,5 +25,16 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-#misc
+# Frontend
+frontend/node_modules/
+
+# Alembic
+migrations/versions/__pycache__/
+
+# Personal
 BUILDING.md
+secrets.md
+
+# AWS CLI installer
+aws/
+awscliv2.zip
