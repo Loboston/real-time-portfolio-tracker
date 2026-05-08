@@ -15,8 +15,9 @@ export function usePortfolioSocket(portfolioId, token) {
 
     function connect() {
       setStatus('connecting')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
       const ws = new WebSocket(
-        `ws://${window.location.host}/ws/portfolios/${portfolioId}?token=${token}`
+        `${protocol}//${window.location.host}/ws/portfolios/${portfolioId}?token=${token}`
       )
       wsRef.current = ws
 
