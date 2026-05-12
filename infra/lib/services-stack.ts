@@ -6,6 +6,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { InfraStack } from './infra-stack';
 
 export class ServicesStack extends cdk.Stack {
@@ -43,6 +44,10 @@ export class ServicesStack extends cdk.Stack {
         SECRET_KEY: ecs.Secret.fromSecretsManager(infra.appSecret),
         DB_USER: ecs.Secret.fromSecretsManager(infra.dbSecret, 'username'),
         DB_PASSWORD: ecs.Secret.fromSecretsManager(infra.dbSecret, 'password'),
+        POLYGON_API_KEY: ecs.Secret.fromSecretsManagerVersion(
+          secretsmanager.Secret.fromSecretNameV2(this, 'PolygonSecret', 'portfolio-tracker/polygon-api-key'),
+          { versionStage: 'AWSCURRENT' },
+        ),
       },
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'backend', logGroup: backendLog }),
     });

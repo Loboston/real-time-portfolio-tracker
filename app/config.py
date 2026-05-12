@@ -31,8 +31,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "INFO"
 
-    # Market data (used in Phase 4)
+    # Market data
     price_poll_interval_seconds: int = 5
+    polygon_api_key: str | None = None
 
     @property
     def is_production(self) -> bool:

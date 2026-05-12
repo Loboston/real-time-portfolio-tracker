@@ -23,6 +23,7 @@ def create_app() -> FastAPI:
     from app.dependencies import engine
     from app.market_data.ingestor import run_ingestor
     from app.market_data.mock_provider import MockMarketDataProvider
+    from app.market_data.polygon_provider import PolygonProvider
     from app.websocket.router import router as ws_router
     from app.websocket.subscriber import run_subscriber
 
@@ -39,7 +40,12 @@ def create_app() -> FastAPI:
         finally:
             await redis.aclose()
 
-        provider = MockMarketDataProvider()
+        if settings.polygon_api_key:
+            logger.info("using polygon.io market data provider")
+            provider = PolygonProvider(settings.polygon_api_key)
+        else:
+            logger.info("using mock market data provider")
+            provider = MockMarketDataProvider()
         ingestor_task = asyncio.create_task(run_ingestor(provider))
         subscriber_task = asyncio.create_task(run_subscriber())
 
