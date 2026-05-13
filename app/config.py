@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     # Market data
     price_poll_interval_seconds: int = 5
-    polygon_api_key: str | None = None
+    finnhub_api_key: str | None = None
 
     @property
     def is_production(self) -> bool:

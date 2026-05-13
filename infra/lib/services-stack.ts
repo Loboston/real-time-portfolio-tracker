@@ -44,9 +44,8 @@ export class ServicesStack extends cdk.Stack {
         SECRET_KEY: ecs.Secret.fromSecretsManager(infra.appSecret),
         DB_USER: ecs.Secret.fromSecretsManager(infra.dbSecret, 'username'),
         DB_PASSWORD: ecs.Secret.fromSecretsManager(infra.dbSecret, 'password'),
-        POLYGON_API_KEY: ecs.Secret.fromSecretsManagerVersion(
-          secretsmanager.Secret.fromSecretNameV2(this, 'PolygonSecret', 'portfolio-tracker/polygon-api-key'),
-          { versionStage: 'AWSCURRENT' },
+        FINNHUB_API_KEY: ecs.Secret.fromSecretsManager(
+          secretsmanager.Secret.fromSecretNameV2(this, 'FinnhubSecret', 'portfolio-tracker/finnhub-api-key'),
         ),
       },
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'backend', logGroup: backendLog }),
